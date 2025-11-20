@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { closeConnection } = require("./apps/common");
 const modelMonitorRoutes = require("./apps/ModelMonitor/routes");
+const setupTimeMonitorRoutes = require("./apps/SetupTimeMonitor/routes");
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -17,17 +18,31 @@ app.get("/", (req, res) => {
     message: "Model Monitor API Server",
     version: "1.0.0",
     endpoints: {
-      "GET /api/rop-monitor/available-months": "Get available months",
-      "GET /api/rop-monitor/metric-cards": "Get metric cards for selected month",
-      "GET /api/rop-monitor/monthly-trends": "Get monthly trends",
-      "GET /api/rop-monitor/grouped-metrics": "Get grouped metrics",
-      "GET /api/rop-monitor/trends-grouped-metrics": "Get trends grouped metrics",
+      rop_monitor: {
+        "GET /api/rop-monitor/available-months": "Get available months",
+        "GET /api/rop-monitor/metric-cards": "Get metric cards for selected month",
+        "GET /api/rop-monitor/metric-trends-cards":
+          "Get metric trends cards for spark charts",
+        "GET /api/rop-monitor/monthly-trends": "Get monthly trends",
+        "GET /api/rop-monitor/grouped-metrics": "Get grouped metrics",
+        "GET /api/rop-monitor/trends-grouped-metrics": "Get trends grouped metrics",
+      },
+      setup_time_monitor: {
+        "GET /api/st-monitor/available-months": "Get available months",
+        "GET /api/st-monitor/metric-cards": "Get metric cards for selected month",
+        "GET /api/st-monitor/metric-trends-cards":
+          "Get metric trends cards for spark charts",
+        "GET /api/st-monitor/monthly-trends": "Get monthly trends",
+        "GET /api/st-monitor/grouped-metrics": "Get grouped metrics",
+        "GET /api/st-monitor/trends-grouped-metrics": "Get trends grouped metrics",
+      },
     },
   });
 });
 
 // API Routes
 app.use("/api/rop-monitor", modelMonitorRoutes);
+app.use("/api/st-monitor", setupTimeMonitorRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {

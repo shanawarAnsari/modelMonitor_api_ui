@@ -1,7 +1,7 @@
-import ModelMonitor from "./model_monitor/rop";
+import MainLayout from "./model_monitor/MainLayout";
 
 function App() {
-  return <ModelMonitor />;
+  return <MainLayout />;
 }
 
 export default App;

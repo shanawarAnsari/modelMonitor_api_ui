@@ -27,22 +27,23 @@ const MetricCards = ({ metrics, loading, viewMode = "monthly" }) => {
       sparkCategories: sparkChartsData.numberOfPO?.categories || [],
     },
     {
-      title: viewMode === "trends" ? "AVG PLANNED RO - MAE" : "PLANNED RO - MAE",
-      value: metrics.plannedRoMAE || 0,
-      unit: "su/h",
-      icon: <BarChartIcon sx={{ fontSize: 24 }} />,
-      color: "#11998e",
-      sparkData: sparkChartsData.plannedRoMAE?.data || [],
-      sparkCategories: sparkChartsData.plannedRoMAE?.categories || [],
-    },
-    {
-      title: viewMode === "trends" ? "AVG AI ML RO - MAE" : "AI ML RO - MAE",
+      title:
+        viewMode === "trends" ? "AVG RECOMMENDED ST - MAE" : "RECOMMENDED ST - MAE",
       value: metrics.aimlRoMAE || 0,
-      unit: "su/h",
+      unit: "min",
       icon: <SmartToyIcon sx={{ fontSize: 24 }} />,
       color: "#a044ff",
       sparkData: sparkChartsData.aimlRoMAE?.data || [],
       sparkCategories: sparkChartsData.aimlRoMAE?.categories || [],
+    },
+    {
+      title: viewMode === "trends" ? "AVG NEW ST - MAE" : "NEW ST - MAE",
+      value: metrics.plannedRoMAE || 0,
+      unit: "min",
+      icon: <BarChartIcon sx={{ fontSize: 24 }} />,
+      color: "#11998e",
+      sparkData: sparkChartsData.plannedRoMAE?.data || [],
+      sparkCategories: sparkChartsData.plannedRoMAE?.categories || [],
     },
   ];
 
