@@ -10,6 +10,9 @@ export const getMetricCards = (selectedMonth) =>
 
 export const getMonthlyTrends = () => axios.get(`${API_BASE_URL}/monthly-trends`);
 
+export const getMetricTrendsCards = () =>
+  axios.get(`${API_BASE_URL}/metric-trends-cards`);
+
 export const getGroupedMetrics = (groupBy, selectedMonth, selectedGroups) =>
   axios.get(`${API_BASE_URL}/grouped-metrics`, {
     params: { groupBy, selectedMonth, selectedGroups },

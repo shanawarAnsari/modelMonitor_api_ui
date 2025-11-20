@@ -3,6 +3,9 @@ import {
   getAvailableMonths,
   getMetricCards,
   getGroupedMetrics,
+  getMonthlyTrends,
+  getTrendsGroupedMetrics,
+  getMetricTrendsCards,
 } from "../../services/modelMonitorService";
 import MetricCards from "./MetricCards";
 import ErrorAnalysisChart from "./ErrorAnalysisChart";
@@ -14,6 +17,8 @@ import {
   Select,
   MenuItem,
   Paper,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import "./styles.css";
@@ -32,6 +37,7 @@ const theme = createTheme({
 const ModelMonitor = () => {
   const [months, setMonths] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("");
+  const [viewMode, setViewMode] = useState("monthly");
   const [metrics, setMetrics] = useState({
     numberOfPO: 0,
     plannedRoMAE: 0,
@@ -46,17 +52,21 @@ const ModelMonitor = () => {
     allAvailableGroups: [],
     totalGroupsCount: 0,
   });
+  const [chartError, setChartError] = useState(null);
 
   useEffect(() => {
     fetchAvailableMonths();
   }, []);
 
   useEffect(() => {
-    if (selectedMonth) {
+    if (viewMode === "monthly" && selectedMonth) {
       fetchMetricCards();
       fetchChartData();
+    } else if (viewMode === "trends") {
+      fetchTrendsData();
+      fetchTrendsChartData();
     }
-  }, [selectedMonth, groupBy]);
+  }, [selectedMonth, groupBy, viewMode]);
 
   const fetchAvailableMonths = async () => {
     try {
@@ -88,6 +98,7 @@ const ModelMonitor = () => {
 
   const fetchChartData = async (selectedGroups = null) => {
     try {
+      setChartError(null);
       const groupsParam =
         selectedGroups && selectedGroups.length > 0
           ? selectedGroups.join(",")
@@ -103,6 +114,74 @@ const ModelMonitor = () => {
       });
     } catch (error) {
       console.error("Error fetching chart data:", error);
+      setChartError(`Data not available for the selected group`);
+      setChartData({
+        categories: [],
+        aiml: [],
+        planned: [],
+        allAvailableGroups: [],
+        totalGroupsCount: 0,
+      });
+    }
+  };
+
+  const fetchTrendsData = async () => {
+    setLoading(true);
+    try {
+      const [trendsResponse, trendsCardsResponse] = await Promise.all([
+        getMonthlyTrends(),
+        getMetricTrendsCards(),
+      ]);
+      const trendsData = trendsResponse.data;
+      const trendsCardsData = trendsCardsResponse.data;
+
+      // Calculate aggregate metrics for trends
+      const totalPO = trendsData.reduce((sum, item) => sum + item.numberOfPO, 0);
+      const avgAimlRoMAE =
+        trendsData.reduce((sum, item) => sum + item.aimlRoMAE, 0) /
+        trendsData.length;
+      const avgPlannedRoMAE =
+        trendsData.reduce((sum, item) => sum + item.plannedRoMAE, 0) /
+        trendsData.length;
+
+      setMetrics({
+        numberOfPO: totalPO || 0,
+        plannedRoMAE: avgPlannedRoMAE?.toFixed(2) || 0,
+        aimlRoMAE: avgAimlRoMAE?.toFixed(2) || 0,
+        trendsData: trendsData,
+        sparkChartsData: trendsCardsData,
+      });
+    } catch (error) {
+      console.error("Error fetching trends data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTrendsChartData = async (selectedGroups = null) => {
+    try {
+      setChartError(null);
+      const groupsParam =
+        selectedGroups && selectedGroups.length > 0
+          ? selectedGroups.join(",")
+          : null;
+      const response = await getTrendsGroupedMetrics(groupBy, groupsParam);
+      const { groupedTrendsMetrics, allAvailableGroups, totalGroupsCount } =
+        response.data;
+
+      setChartData({
+        trendsData: groupedTrendsMetrics,
+        allAvailableGroups: allAvailableGroups || [],
+        totalGroupsCount: totalGroupsCount || 0,
+      });
+    } catch (error) {
+      console.error("Error fetching trends chart data:", error);
+      setChartError(`Data not available for the selected group`);
+      setChartData({
+        trendsData: [],
+        allAvailableGroups: [],
+        totalGroupsCount: 0,
+      });
     }
   };
 
@@ -142,33 +221,68 @@ const ModelMonitor = () => {
               >
                 Model Monitor Dashboard
               </Typography>
-              <FormControl size="small" sx={{ minWidth: 160 }}>
-                <Select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
+              <Box display="flex" alignItems="center" gap={1}>
+                {viewMode === "monthly" && (
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <Select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      sx={{
+                        fontWeight: 600,
+                        bgcolor: "white",
+                        fontSize: "0.75rem",
+                        "& .MuiSelect-select": {
+                          py: 0.5,
+                          px: 1,
+                        },
+                      }}
+                    >
+                      {months.map((month) => (
+                        <MenuItem
+                          key={month.value}
+                          value={month.value}
+                          sx={{ fontSize: "0.75rem" }}
+                        >
+                          {month.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+                <ToggleButtonGroup
+                  value={viewMode}
+                  exclusive
+                  onChange={(e, newMode) => newMode && setViewMode(newMode)}
+                  size="small"
                   sx={{
-                    fontWeight: 600,
                     bgcolor: "white",
-                    fontSize: "0.875rem",
+                    "& .MuiToggleButton-root": {
+                      fontSize: "0.7rem",
+                      px: 1.5,
+                      py: 0.4,
+                      fontWeight: 600,
+                      textTransform: "none",
+                    },
                   }}
                 >
-                  {months.map((month) => (
-                    <MenuItem key={month.value} value={month.value}>
-                      {month.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                  <ToggleButton value="monthly">Monthly</ToggleButton>
+                  <ToggleButton value="trends">Trends</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
             </Box>
           </Paper>
 
-          <MetricCards metrics={metrics} loading={loading} />
+          <MetricCards metrics={metrics} loading={loading} viewMode={viewMode} />
           <ErrorAnalysisChart
             groupBy={groupBy}
             setGroupBy={setGroupBy}
             chartData={chartData}
-            onGroupSelectionChange={fetchChartData}
+            onGroupSelectionChange={
+              viewMode === "monthly" ? fetchChartData : fetchTrendsChartData
+            }
             selectedMonth={selectedMonth}
+            error={chartError}
+            viewMode={viewMode}
           />
         </Container>
       </Box>

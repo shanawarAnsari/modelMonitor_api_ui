@@ -39,6 +39,21 @@ const getMetricCards = async (req, res) => {
   }
 };
 
+// Get metric trends cards for spark charts
+const getMetricTrendsCards = async (req, res) => {
+  try {
+    const data = await ropMonitorRepository.getMetricTrendsCards();
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("Error fetching metric trends cards:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching metric trends cards",
+      error: error.message,
+    });
+  }
+};
+
 // Get monthly trends
 const getMonthlyTrends = async (req, res) => {
   try {
@@ -116,6 +131,7 @@ const getTrendsGroupedMetrics = async (req, res) => {
 module.exports = {
   getAvailableMonths,
   getMetricCards,
+  getMetricTrendsCards,
   getMonthlyTrends,
   getGroupedMetrics,
   getTrendsGroupedMetrics,

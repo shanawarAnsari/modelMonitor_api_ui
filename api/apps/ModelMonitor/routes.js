@@ -9,6 +9,9 @@ router.get("/available-months", ropMonitorController.getAvailableMonths);
 // Get metric cards data for a specific month
 router.get("/metric-cards", ropMonitorController.getMetricCards);
 
+// Get metric trends cards for spark charts
+router.get("/metric-trends-cards", ropMonitorController.getMetricTrendsCards);
+
 // Get monthly trends across all months
 router.get("/monthly-trends", ropMonitorController.getMonthlyTrends);
 

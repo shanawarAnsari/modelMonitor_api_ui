@@ -12,26 +12,35 @@ import {
   BarChart as BarChartIcon,
   SmartToy as SmartToyIcon,
 } from "@mui/icons-material";
+import Chart from "react-apexcharts";
 
-const MetricCards = ({ metrics, loading }) => {
+const MetricCards = ({ metrics, loading, viewMode = "monthly" }) => {
+  const sparkChartsData = metrics.sparkChartsData || {};
+
   const cards = [
     {
-      title: "NUMBER OF PO",
-      value: metrics.numberOfPO.toLocaleString(),
+      title: viewMode === "trends" ? "TOTAL PO" : "NUMBER OF PO",
+      value: metrics.numberOfPO?.toLocaleString() || 0,
       icon: <InventoryIcon sx={{ fontSize: 24 }} />,
       color: "#667eea",
+      sparkData: sparkChartsData.numberOfPO?.data || [],
+      sparkCategories: sparkChartsData.numberOfPO?.categories || [],
     },
     {
-      title: "PLANNED RO - MAE",
-      value: metrics.plannedRoMAE,
+      title: viewMode === "trends" ? "AVG PLANNED RO - MAE" : "PLANNED RO - MAE",
+      value: metrics.plannedRoMAE || 0,
       icon: <BarChartIcon sx={{ fontSize: 24 }} />,
       color: "#11998e",
+      sparkData: sparkChartsData.plannedRoMAE?.data || [],
+      sparkCategories: sparkChartsData.plannedRoMAE?.categories || [],
     },
     {
-      title: "AI ML RO - MAE",
-      value: metrics.aimlRoMAE,
+      title: viewMode === "trends" ? "AVG AI ML RO - MAE" : "AI ML RO - MAE",
+      value: metrics.aimlRoMAE || 0,
       icon: <SmartToyIcon sx={{ fontSize: 24 }} />,
       color: "#a044ff",
+      sparkData: sparkChartsData.aimlRoMAE?.data || [],
+      sparkCategories: sparkChartsData.aimlRoMAE?.categories || [],
     },
   ];
 
@@ -87,17 +96,59 @@ const MetricCards = ({ metrics, loading }) => {
                 >
                   {card.title}
                 </Typography>
-                <Typography
-                  variant="h5"
-                  fontWeight={700}
-                  sx={{ color: card.color, lineHeight: 1.2 }}
-                >
-                  {loading ? (
-                    <CircularProgress size={18} sx={{ color: card.color }} />
-                  ) : (
-                    card.value
-                  )}
-                </Typography>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Typography
+                    variant="h5"
+                    fontWeight={700}
+                    sx={{ color: card.color, lineHeight: 1.2 }}
+                  >
+                    {loading ? (
+                      <CircularProgress size={18} sx={{ color: card.color }} />
+                    ) : (
+                      card.value
+                    )}
+                  </Typography>
+                  {viewMode === "trends" &&
+                    !loading &&
+                    card.sparkData.length > 0 && (
+                      <Box sx={{ width: 80, height: 30, ml: "auto" }}>
+                        <Chart
+                          options={{
+                            chart: {
+                              type: "line",
+                              sparkline: { enabled: true },
+                              animations: { enabled: false },
+                            },
+                            stroke: { width: 2, curve: "smooth" },
+                            colors: [card.color],
+                            tooltip: {
+                              enabled: true,
+                              fixed: { enabled: false },
+                              x: { show: true },
+                              y: {
+                                title: {
+                                  formatter: () => "",
+                                },
+                              },
+                              marker: { show: false },
+                            },
+                            xaxis: {
+                              categories: card.sparkCategories,
+                            },
+                          }}
+                          series={[
+                            {
+                              name: "Trend",
+                              data: card.sparkData,
+                            },
+                          ]}
+                          type="line"
+                          height={30}
+                          width={80}
+                        />
+                      </Box>
+                    )}
+                </Box>
               </Box>
             </Box>
           </CardContent>

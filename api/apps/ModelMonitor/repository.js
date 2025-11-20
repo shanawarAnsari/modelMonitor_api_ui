@@ -27,17 +27,87 @@ const getMetricCards = async (selectedMonth) => {
     const query = `
       SELECT 
         COUNT(DISTINCT PROCESS_ORDER_NUMBER) as numberOfPO,
-        AVG(CAST(AIML_RO_ABSOLUTE_ERROR AS FLOAT)) as aimlRoMAE,
+        AVG(CAST(RECOMMENDED_RO_ABSOLUTE_ERROR AS FLOAT)) as aimlRoMAE,
         AVG(CAST(NEW_RO_ABSOLUTE_ERROR AS FLOAT)) as plannedRoMAE
       FROM RATE_OF_OPERATIONS_MONITOR
       WHERE FORMAT(ACTUAL_START_DATE, 'yyyy-MM') = @selectedMonth
-        AND AIML_RO_ABSOLUTE_ERROR IS NOT NULL
+        AND RECOMMENDED_RO_ABSOLUTE_ERROR IS NOT NULL
         AND NEW_RO_ABSOLUTE_ERROR IS NOT NULL
     `;
 
     const result = await executeQuery(query, { selectedMonth });
 
     return result.recordset[0] || { numberOfPO: 0, aimlRoMAE: 0, plannedRoMAE: 0 };
+  } catch (error) {
+    throw new Error(`Database error: ${error.message}`);
+  }
+};
+
+// Get metric trends cards for spark charts
+const getMetricTrendsCards = async () => {
+  try {
+    const query = `
+      SELECT 
+        FORMAT(ACTUAL_START_DATE, 'yyyy-MM') as monthKey,
+        DATENAME(MONTH, ACTUAL_START_DATE) as month,
+        YEAR(ACTUAL_START_DATE) as year,
+        COUNT(DISTINCT PROCESS_ORDER_NUMBER) as numberOfPO,
+        AVG(CAST(RECOMMENDED_RO_ABSOLUTE_ERROR AS FLOAT)) as aimlRoMAE,
+        AVG(CAST(NEW_RO_ABSOLUTE_ERROR AS FLOAT)) as plannedRoMAE
+      FROM RATE_OF_OPERATIONS_MONITOR
+      WHERE ACTUAL_START_DATE IS NOT NULL
+        AND RECOMMENDED_RO_ABSOLUTE_ERROR IS NOT NULL
+        AND NEW_RO_ABSOLUTE_ERROR IS NOT NULL
+      GROUP BY 
+        FORMAT(ACTUAL_START_DATE, 'yyyy-MM'),
+        DATENAME(MONTH, ACTUAL_START_DATE),
+        YEAR(ACTUAL_START_DATE),
+        MONTH(ACTUAL_START_DATE)
+      ORDER BY 
+        YEAR(ACTUAL_START_DATE),
+        MONTH(ACTUAL_START_DATE)
+    `;
+
+    const result = await executeQuery(query);
+
+    // Format data for spark charts
+    const numberOfPOData = result.recordset.map((row) => ({
+      month: `${row.month} ${row.year}`,
+      value: row.numberOfPO,
+    }));
+
+    const aimlRoMAEData = result.recordset.map((row) => ({
+      month: `${row.month} ${row.year}`,
+      value: Number(row.aimlRoMAE.toFixed(2)),
+    }));
+
+    const plannedRoMAEData = result.recordset.map((row) => ({
+      month: `${row.month} ${row.year}`,
+      value: Number(row.plannedRoMAE.toFixed(2)),
+    }));
+
+    return {
+      numberOfPO: {
+        data: numberOfPOData.map((d) => d.value),
+        categories: numberOfPOData.map((d) => d.month),
+        total: numberOfPOData.reduce((sum, d) => sum + d.value, 0),
+      },
+      aimlRoMAE: {
+        data: aimlRoMAEData.map((d) => d.value),
+        categories: aimlRoMAEData.map((d) => d.month),
+        average: (
+          aimlRoMAEData.reduce((sum, d) => sum + d.value, 0) / aimlRoMAEData.length
+        ).toFixed(2),
+      },
+      plannedRoMAE: {
+        data: plannedRoMAEData.map((d) => d.value),
+        categories: plannedRoMAEData.map((d) => d.month),
+        average: (
+          plannedRoMAEData.reduce((sum, d) => sum + d.value, 0) /
+          plannedRoMAEData.length
+        ).toFixed(2),
+      },
+    };
   } catch (error) {
     throw new Error(`Database error: ${error.message}`);
   }
@@ -51,11 +121,11 @@ const getMonthlyTrends = async () => {
         DATENAME(MONTH, ACTUAL_START_DATE) as month,
         YEAR(ACTUAL_START_DATE) as year,
         COUNT(DISTINCT PROCESS_ORDER_NUMBER) as numberOfPO,
-        AVG(CAST(AIML_RO_ABSOLUTE_ERROR AS FLOAT)) as aimlRoMAE,
+        AVG(CAST(RECOMMENDED_RO_ABSOLUTE_ERROR AS FLOAT)) as aimlRoMAE,
         AVG(CAST(NEW_RO_ABSOLUTE_ERROR AS FLOAT)) as plannedRoMAE
       FROM RATE_OF_OPERATIONS_MONITOR
       WHERE ACTUAL_START_DATE IS NOT NULL
-        AND AIML_RO_ABSOLUTE_ERROR IS NOT NULL
+        AND RECOMMENDED_RO_ABSOLUTE_ERROR IS NOT NULL
         AND NEW_RO_ABSOLUTE_ERROR IS NOT NULL
       GROUP BY 
         DATENAME(MONTH, ACTUAL_START_DATE),
@@ -93,7 +163,7 @@ const getGroupedMetrics = async (groupBy, selectedMonth, selectedGroups) => {
     }
 
     let whereClause =
-      "WHERE AIML_RO_ABSOLUTE_ERROR IS NOT NULL AND NEW_RO_ABSOLUTE_ERROR IS NOT NULL";
+      "WHERE RECOMMENDED_RO_ABSOLUTE_ERROR IS NOT NULL AND NEW_RO_ABSOLUTE_ERROR IS NOT NULL";
     const params = {};
 
     if (selectedMonth) {
@@ -117,7 +187,7 @@ const getGroupedMetrics = async (groupBy, selectedMonth, selectedGroups) => {
     let mainQuery = `
       SELECT TOP 10
         ${groupBy} as groupName,
-        AVG(CAST(AIML_RO_ABSOLUTE_ERROR AS FLOAT)) as aimlRoMAE,
+        AVG(CAST(RECOMMENDED_RO_ABSOLUTE_ERROR AS FLOAT)) as aimlRoMAE,
         AVG(CAST(NEW_RO_ABSOLUTE_ERROR AS FLOAT)) as plannedRoMAE,
         COUNT(*) as count,
         COUNT(DISTINCT PROCESS_ORDER_NUMBER) as processOrderCount
@@ -138,7 +208,7 @@ const getGroupedMetrics = async (groupBy, selectedMonth, selectedGroups) => {
 
     mainQuery += `
       GROUP BY ${groupBy}
-      ORDER BY AVG(CAST(AIML_RO_ABSOLUTE_ERROR AS FLOAT)) DESC
+      ORDER BY AVG(CAST(RECOMMENDED_RO_ABSOLUTE_ERROR AS FLOAT)) DESC
     `;
 
     const result = await executeQuery(mainQuery, params);
@@ -178,7 +248,7 @@ const getTrendsGroupedMetrics = async (groupBy, selectedGroups) => {
     const allGroupsQuery = `
       SELECT DISTINCT ${groupBy} as groupName
       FROM RATE_OF_OPERATIONS_MONITOR
-      WHERE AIML_RO_ABSOLUTE_ERROR IS NOT NULL 
+      WHERE RECOMMENDED_RO_ABSOLUTE_ERROR IS NOT NULL 
         AND NEW_RO_ABSOLUTE_ERROR IS NOT NULL
         AND ${groupBy} IS NOT NULL
       ORDER BY ${groupBy}
@@ -195,11 +265,11 @@ const getTrendsGroupedMetrics = async (groupBy, selectedGroups) => {
       const top2Query = `
         SELECT TOP 2 ${groupBy} as groupName
         FROM RATE_OF_OPERATIONS_MONITOR
-        WHERE AIML_RO_ABSOLUTE_ERROR IS NOT NULL 
+        WHERE RECOMMENDED_RO_ABSOLUTE_ERROR IS NOT NULL 
           AND NEW_RO_ABSOLUTE_ERROR IS NOT NULL
           AND ${groupBy} IS NOT NULL
         GROUP BY ${groupBy}
-        ORDER BY AVG(CAST(AIML_RO_ABSOLUTE_ERROR AS FLOAT)) DESC
+        ORDER BY AVG(CAST(RECOMMENDED_RO_ABSOLUTE_ERROR AS FLOAT)) DESC
       `;
 
       const top2Result = await executeQuery(top2Query);
@@ -219,12 +289,12 @@ const getTrendsGroupedMetrics = async (groupBy, selectedGroups) => {
         ${groupBy} as groupName,
         DATENAME(MONTH, ACTUAL_START_DATE) as month,
         YEAR(ACTUAL_START_DATE) as year,
-        AVG(CAST(AIML_RO_ABSOLUTE_ERROR AS FLOAT)) as aimlRoMAE,
+        AVG(CAST(RECOMMENDED_RO_ABSOLUTE_ERROR AS FLOAT)) as aimlRoMAE,
         AVG(CAST(NEW_RO_ABSOLUTE_ERROR AS FLOAT)) as plannedRoMAE,
         COUNT(DISTINCT PROCESS_ORDER_NUMBER) as processOrderCount,
         COUNT(*) as count
       FROM RATE_OF_OPERATIONS_MONITOR
-      WHERE AIML_RO_ABSOLUTE_ERROR IS NOT NULL 
+      WHERE RECOMMENDED_RO_ABSOLUTE_ERROR IS NOT NULL 
         AND NEW_RO_ABSOLUTE_ERROR IS NOT NULL
         AND ${groupBy} IN (${groupPlaceholders})
       GROUP BY 
@@ -272,6 +342,7 @@ const getTrendsGroupedMetrics = async (groupBy, selectedGroups) => {
 module.exports = {
   getAvailableMonths,
   getMetricCards,
+  getMetricTrendsCards,
   getMonthlyTrends,
   getGroupedMetrics,
   getTrendsGroupedMetrics,
