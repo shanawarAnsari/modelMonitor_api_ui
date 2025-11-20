@@ -16,15 +16,19 @@ import {
   Timer as TimerIcon,
   Menu as MenuIcon,
   Close as CloseIcon,
+  ChevronRight as ChevronRightIcon,
+  ChevronLeft as ChevronLeftIcon,
 } from "@mui/icons-material";
 import ROPMonitor from "./rop";
 import SetupTimeMonitor from "./st";
 
 const DRAWER_WIDTH = 280;
+const MINI_DRAWER_WIDTH = 60;
 
 const MainLayout = () => {
   const [selectedSection, setSelectedSection] = useState("rop");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(true);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -33,6 +37,14 @@ const MainLayout = () => {
   const handleSectionChange = (section) => {
     setSelectedSection(section);
     setMobileOpen(false);
+  };
+
+  const handleDrawerOpen = () => {
+    setDrawerOpen(true);
+  };
+
+  const handleDrawerClose = () => {
+    setDrawerOpen(false);
   };
 
   const menuItems = [
@@ -61,82 +73,123 @@ const MainLayout = () => {
     >
       <Box
         sx={{
-          p: 2.5,
+          p: drawerOpen ? 2.5 : 1,
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent: drawerOpen ? "space-between" : "center",
         }}
       >
-        <Typography
-          variant="h6"
-          fontWeight={700}
-          sx={{
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
+        {drawerOpen && (
+          <Typography
+            variant="h6"
+            fontWeight={700}
+            sx={{
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            Model Monitor
+          </Typography>
+        )}
+        <IconButton
+          onClick={handleDrawerToggle}
+          sx={{ display: { xs: "flex", sm: "none" } }}
         >
-          Model Monitor
-        </Typography>
-        <IconButton onClick={handleDrawerToggle} sx={{ display: { sm: "none" } }}>
           <CloseIcon />
+        </IconButton>
+        <IconButton
+          onClick={drawerOpen ? handleDrawerClose : handleDrawerOpen}
+          sx={{ display: { xs: "none", sm: "flex" } }}
+        >
+          {drawerOpen ? <ChevronRightIcon /> : <ChevronLeftIcon />}
         </IconButton>
       </Box>
       <Divider />
       <List sx={{ flex: 1, pt: 2 }}>
         {menuItems.map((item) => (
-          <ListItem key={item.id} disablePadding sx={{ mb: 1, px: 1.5 }}>
+          <ListItem
+            key={item.id}
+            disablePadding
+            sx={{ mb: 1, px: drawerOpen ? 1.5 : 0.5 }}
+          >
             <ListItemButton
               selected={selectedSection === item.id}
               onClick={() => handleSectionChange(item.id)}
               sx={{
                 borderRadius: 2,
                 transition: "all 0.3s ease",
+                justifyContent: drawerOpen ? "flex-start" : "center",
+                px: drawerOpen ? 2 : 1,
                 "&.Mui-selected": {
                   backgroundColor: `${item.color}15`,
-                  borderLeft: `4px solid ${item.color}`,
+                  borderLeft: drawerOpen ? `4px solid ${item.color}` : "none",
                   "&:hover": {
                     backgroundColor: `${item.color}20`,
                   },
                 },
                 "&:hover": {
                   backgroundColor: `${item.color}10`,
-                  transform: "translateX(4px)",
+                  transform: drawerOpen ? "translateX(4px)" : "none",
                 },
               }}
             >
               <ListItemIcon
                 sx={{
                   color: selectedSection === item.id ? item.color : "text.secondary",
-                  minWidth: 40,
+                  minWidth: drawerOpen ? 40 : "auto",
+                  justifyContent: "center",
                 }}
               >
                 {item.icon}
               </ListItemIcon>
-              <ListItemText
-                primary={item.label}
-                primaryTypographyProps={{
-                  fontWeight: selectedSection === item.id ? 600 : 500,
-                  fontSize: "0.95rem",
-                  color: selectedSection === item.id ? item.color : "text.primary",
-                }}
-              />
+              {drawerOpen && (
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    fontWeight: selectedSection === item.id ? 600 : 500,
+                    fontSize: "0.95rem",
+                    color: selectedSection === item.id ? item.color : "text.primary",
+                  }}
+                />
+              )}
             </ListItemButton>
           </ListItem>
         ))}
       </List>
       <Divider />
-      <Box sx={{ p: 2, textAlign: "center" }}>
-        <Typography variant="caption" color="text.secondary">
-          Model Monitor Dashboard v1.0
-        </Typography>
-      </Box>
+      {drawerOpen && (
+        <Box sx={{ p: 2, textAlign: "center" }}>
+          <Typography variant="caption" color="text.secondary">
+            Model Monitor Dashboard v1.0
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
+      {/* Main Content */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          width: "100%",
+          minHeight: "100vh",
+          marginRight: {
+            xs: 0,
+            sm: drawerOpen ? `${DRAWER_WIDTH}px` : `${MINI_DRAWER_WIDTH}px`,
+          },
+          transition: "margin-right 0.3s ease",
+        }}
+      >
+        {selectedSection === "rop" ? <ROPMonitor /> : <SetupTimeMonitor />}
+      </Box>
+
+      {/* Toggle Button - Desktop - Removed since drawer is always visible */}
+
       {/* Mobile Menu Button */}
       <IconButton
         color="inherit"
@@ -148,7 +201,7 @@ const MainLayout = () => {
           top: 16,
           right: 16,
           zIndex: 1300,
-          display: { sm: "none" },
+          display: { xs: "flex", sm: "none" },
           bgcolor: "white",
           boxShadow: 2,
           "&:hover": {
@@ -163,18 +216,19 @@ const MainLayout = () => {
       {/* Sidebar - Desktop */}
       <Drawer
         variant="permanent"
+        anchor="right"
         sx={{
           display: { xs: "none", sm: "block" },
-          width: DRAWER_WIDTH,
           flexShrink: 0,
           "& .MuiDrawer-paper": {
-            width: DRAWER_WIDTH,
+            width: drawerOpen ? DRAWER_WIDTH : MINI_DRAWER_WIDTH,
             boxSizing: "border-box",
             border: "none",
-            boxShadow: "2px 0 8px rgba(0,0,0,0.1)",
+            boxShadow: "-2px 0 8px rgba(0,0,0,0.1)",
+            transition: "width 0.3s ease",
+            overflowX: "hidden",
           },
         }}
-        open
       >
         {drawer}
       </Drawer>
@@ -186,7 +240,7 @@ const MainLayout = () => {
         open={mobileOpen}
         onClose={handleDrawerToggle}
         ModalProps={{
-          keepMounted: true, // Better open performance on mobile.
+          keepMounted: true,
         }}
         sx={{
           display: { xs: "block", sm: "none" },
@@ -198,18 +252,6 @@ const MainLayout = () => {
       >
         {drawer}
       </Drawer>
-
-      {/* Main Content */}
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
-          minHeight: "100vh",
-        }}
-      >
-        {selectedSection === "rop" ? <ROPMonitor /> : <SetupTimeMonitor />}
-      </Box>
     </Box>
   );
 };

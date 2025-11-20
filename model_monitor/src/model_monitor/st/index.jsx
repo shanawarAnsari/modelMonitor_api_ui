@@ -21,7 +21,6 @@ import {
   ToggleButtonGroup,
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import "./styles.css";
 
 const theme = createTheme({
   palette: {

@@ -16,7 +16,6 @@ import {
   Paper,
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import "./styles.css";
 
 const theme = createTheme({
   palette: {
@@ -100,7 +99,13 @@ const ModelMonitor = () => {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box className="dashboard">
+      <Box
+        sx={{
+          minHeight: "100vh",
+          fontFamily:
+            '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
+        }}
+      >
         <Container maxWidth="xl">
           <Paper
             elevation={3}
